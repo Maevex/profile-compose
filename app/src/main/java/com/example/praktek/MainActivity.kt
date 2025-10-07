@@ -40,10 +40,11 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Serializable object Login
 
-@Serializable object Register
 @Serializable object Profile
 @Serializable object NextScreen
 @Serializable object ThirdScreen
+
+@Serializable object Register
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +65,10 @@ class MainActivity : ComponentActivity() {
 
                         composable<Login> {
                             LoginPage(navController = navController)
+                        }
+
+                        composable<Register> {
+                            RegisterPage(navController = navController)
                         }
 
 
@@ -102,7 +107,7 @@ fun LoginPage(navController: NavController, modifier: Modifier = Modifier){
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ){
-        Text("Silakan Login", style = MaterialTheme.typography.headlineMedium)
+        Text("Login", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
@@ -155,6 +160,11 @@ fun LoginPage(navController: NavController, modifier: Modifier = Modifier){
         ) {
             Text("Login")
         }
+
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = {navController.navigate(Register)}) {
+            Text("Dont have an account? Register Here")
+        }
     }
 }
 
@@ -166,6 +176,8 @@ fun RegisterPage(navController: NavController, modifier: Modifier = Modifier){
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
+    val  firebaseAuth = FirebaseAuth.getInstance()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -173,7 +185,7 @@ fun RegisterPage(navController: NavController, modifier: Modifier = Modifier){
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Buat Akun Baru", style = MaterialTheme.typography.headlineMedium)
+        Text("Create New Account", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
@@ -183,6 +195,67 @@ fun RegisterPage(navController: NavController, modifier: Modifier = Modifier){
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = {password = it},
+            label = {Text("Password")},
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    val image = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                    Icon(imageVector = image, contentDescription = "Toggle password visibility")
+                }
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        //password confirm
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = {confirmPassword = it},
+            label = {Text("Confirm Password")},
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation()
+
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            if (email.isBlank() || password.isBlank() || confirmPassword.isBlank()){
+                Toast.makeText(context, "Please fill the blanks", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+            if (password != confirmPassword){
+                Toast.makeText(context, "Password and confirmed password doesn't match", Toast.LENGTH_SHORT).show()
+                    return@Button
+            }
+
+            firebaseAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful){
+                        Toast.makeText(context, "Registration success", Toast.LENGTH_SHORT).show()
+                        navController.navigate(Profile){
+                            popUpTo(Login){
+                                inclusive = true
+                            }
+                        }
+                    }else{
+                        val errorMessage = task.exception?.message ?: "Registration failed"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text("Regist")
+        }
+
 
     }
 }
